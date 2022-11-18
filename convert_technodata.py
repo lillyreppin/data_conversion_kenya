@@ -6,8 +6,8 @@ import os
 # Technology keys in base model (left, key) and US database (right, value)
 TECHNO_MAPPING_DICT = {
     "Biomass Power Plant": "Biopower - Dedicated",
-    "CSP with Storage": "CSP - Class 4", # class 2-7
-    "CSP without Storage": "CSP - Class 4", # class 2-7
+    "CSP with Storage": "CSP - Class 3", # class 2-7
+    "CSP without Storage": "CSP - Class 3", # class 2-7
     "Coal Power Plant": "Coal",
     "Gas Power Plant (CCGT)": "NG F-Frame CC",
     "Gas Power Plant (SCGT)": "NG F-Frame CT",
@@ -46,17 +46,20 @@ TECHNO_MAPPING_DICT = {
 
 
 LIFETIME_METRIC = {
-    "Biopower": 30,
-    "CSP": 30,
+    "Biopower - Dedicated": 30,
+    "CSP - Class 3": 30,
     "Coal": 35,
-    "Natural Gas": 25,
-    "Geothermal": 25,
-    "Hydropower":50,
-    "Nuclear": 50,
-    "Offshore Wind": 25,
-    "Land-Based Wind": 25,
-    "Utility-Scale PV-Plus-Battery": 24,
-    "Utility PV": 24,
+    "NG F-Frame CC": 25,
+    "NG F-Frame CT": 25,
+    "Geothermal - Hydro / Flash": 25,
+    "Pumped Storage Hydropower - National Class 7": 50,
+    "Hydropower - NPD 6": 50,
+    "Hydropower - NPD 3": 50,
+    "Nuclear - Small Modular Reactor": 50,
+    "Offshore Wind - Class 3": 25,
+    "Land-Based Wind - Class 9": 25,
+    "PV+Storage - Class 4": 24,
+    "Utility PV - Class 4": 24,
 }
 
 YEARS_OF_INTEREST = [2020, 2025, 2030, 2040, 2050]
@@ -153,7 +156,7 @@ class TechnoData:
             print(tech)
             # get relevant rows
             df_US = self.us_data.loc[
-                (self.us_data["technology_alias"] == tech)
+                (self.us_data["display_name"] == tech)
                 & (
                     self.us_data["core_metric_variable"].isin(YEARS_OF_INTEREST))
                     & (self.us_data["scenario"] == "Moderate")
@@ -164,6 +167,7 @@ class TechnoData:
             df_US_fix = df_US.loc[
                 (self.us_data["core_metric_parameter"] == "Fixed O&M")
             ]
+
             # decide for lifetime
             # lifetimes given by US database
             lifetimes_for_tech = np.sort(np.asarray(df_US_fix.crpyears.unique()).astype(int))
