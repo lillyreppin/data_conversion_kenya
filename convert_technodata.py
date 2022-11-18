@@ -5,25 +5,45 @@ import os
 
 # Technology keys in base model (left, key) and US database (right, value)
 TECHNO_MAPPING_DICT = {
-    "Biomass Power Plant": "Biopower",
-    "CSP with Storage": "CSP",
-    "CSP without Storage": "CSP",
+    "Biomass Power Plant": "Biopower - Dedicated",
+    "CSP with Storage": "CSP - Class 4", # class 2-7
+    "CSP without Storage": "CSP - Class 4", # class 2-7
     "Coal Power Plant": "Coal",
-    "Gas Power Plant (CCGT)": "Natural Gas",
-    "Gas Power Plant (SCGT)": "Natural Gas",
-    "Geothermal Power Plant": "Geothermal",
-    "Large Hydropower Plant (Dam) (>100MW)": "Hydropower",
+    "Gas Power Plant (CCGT)": "NG F-Frame CC",
+    "Gas Power Plant (SCGT)": "NG F-Frame CT",
+    "Geothermal Power Plant": "Geothermal - Hydro / Flash",
+    "Large Hydropower Plant (Dam) (>100MW)": "Pumped Storage Hydropower - National Class 7", # upwards
     # "Light Fuel Oil Power Plant	": "	-	",
     # "Light Fuel Oil Standalone Generator (1kW)	": "	-	",
-    "Medium Hydropower Plant (10-100MW)": "Hydropower",
-    "Nuclear Power Plant": "Nuclear",
-    "Offshore Wind": "Offshore wind",
+    "Medium Hydropower Plant (10-100MW)": "Hydropower - NPD 6",
+    "Nuclear Power Plant": "Nuclear - Small Modular Reactor",
+    "Offshore Wind": "Offshore Wind - Class 3",
     # "Oil Fired Gas Turbine (SCGT)	": "	-	",
-    "Onshore Wind": "Land-based wind",
-    "Small Hydropower Plant (<10MW)": "Hydropower",
-    "Solar PV (Distributed with Storage)": "Utility-Scale PV-Plus-Battery",
-    "Solar PV (Utility)": "Utility PV",
+    "Onshore Wind": "Land-Based Wind - Class 9",
+    "Small Hydropower Plant (<10MW)": "Hydropower - NPD 3",
+    "Solar PV (Distributed with Storage)": "PV+Storage - Class 4", # class 2-7
+    "Solar PV (Utility)": "Utility PV - Class 4", # class 2-7
 }
+
+#    "Biomass Power Plant": "Biopower",
+#    "CSP with Storage": "CSP",
+#    "CSP without Storage": "CSP",
+#    "Coal Power Plant": "Coal",
+#    "Gas Power Plant (CCGT)": "Natural Gas",
+#    "Gas Power Plant (SCGT)": "Natural Gas",
+#    "Geothermal Power Plant": "Geothermal",
+#    "Large Hydropower Plant (Dam) (>100MW)": "Hydropower",
+    # "Light Fuel Oil Power Plant	": "	-	",
+    # "Light Fuel Oil Standalone Generator (1kW)	": "	-	",
+#    "Medium Hydropower Plant (10-100MW)": "Hydropower",
+#    "Nuclear Power Plant": "Nuclear",
+#    "Offshore Wind": "Offshore Wind",
+    # "Oil Fired Gas Turbine (SCGT)	": "	-	",
+#    "Onshore Wind": "Land-Based Wind",
+#    "Small Hydropower Plant (<10MW)": "Hydropower",
+#    "Solar PV (Distributed with Storage)": "Utility-Scale PV-Plus-Battery",
+#    "Solar PV (Utility)": "Utility PV",
+
 
 LIFETIME_METRIC = {
     "Biopower": 30,
@@ -33,8 +53,8 @@ LIFETIME_METRIC = {
     "Geothermal": 25,
     "Hydropower":50,
     "Nuclear": 50,
-    "Offshore wind": 25,
-    "Land-based wind": 25,
+    "Offshore Wind": 25,
+    "Land-Based Wind": 25,
     "Utility-Scale PV-Plus-Battery": 24,
     "Utility PV": 24,
 }
@@ -144,9 +164,6 @@ class TechnoData:
             df_US_fix = df_US.loc[
                 (self.us_data["core_metric_parameter"] == "Fixed O&M")
             ]
-            if "Natural" in tech:
-                breakpoint()
-
             # decide for lifetime
             # lifetimes given by US database
             lifetimes_for_tech = np.sort(np.asarray(df_US_fix.crpyears.unique()).astype(int))
@@ -171,7 +188,7 @@ class TechnoData:
         #     }
         # )
 
-        return truncated_base_data
+        return truncated_US_data_fix
 
 
 #  "technology",
