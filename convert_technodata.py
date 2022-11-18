@@ -6,60 +6,58 @@ import os
 # Technology keys in base model (left, key) and US database (right, value)
 TECHNO_MAPPING_DICT = {
     "Biomass Power Plant": "Biopower - Dedicated",
-    "CSP with Storage": "CSP - Class 3", # class 2-7
-    "CSP without Storage": "CSP - Class 3", # class 2-7
+    "CSP with Storage": "CSP - Class",  # class 2-7
+    "CSP without Storage": "CSP - Class",  # class 2-7
     "Coal Power Plant": "Coal",
     "Gas Power Plant (CCGT)": "NG F-Frame CC",
     "Gas Power Plant (SCGT)": "NG F-Frame CT",
-    "Geothermal Power Plant": "Geothermal - Hydro / Flash",
-    "Large Hydropower Plant (Dam) (>100MW)": "Pumped Storage Hydropower - National Class 7", # upwards
+    "Geothermal Power Plant": "Geothermal",
+    "Large Hydropower Plant (Dam) (>100MW)": "Pumped Storage Hydropower - National Class",  # upwards
     # "Light Fuel Oil Power Plant	": "	-	",
     # "Light Fuel Oil Standalone Generator (1kW)	": "	-	",
-    "Medium Hydropower Plant (10-100MW)": "Hydropower - NPD 6",
-    "Nuclear Power Plant": "Nuclear - Small Modular Reactor",
-    "Offshore Wind": "Offshore Wind - Class 3",
+    "Medium Hydropower Plant (10-100MW)": "Hydropower - NPD",
+    "Nuclear Power Plant": "Nuclear",
+    "Offshore Wind": "Offshore Wind - Class",
     # "Oil Fired Gas Turbine (SCGT)	": "	-	",
-    "Onshore Wind": "Land-Based Wind - Class 9",
-    "Small Hydropower Plant (<10MW)": "Hydropower - NPD 3",
-    "Solar PV (Distributed with Storage)": "PV+Storage - Class 4", # class 2-7
-    "Solar PV (Utility)": "Utility PV - Class 4", # class 2-7
+    "Onshore Wind": "Land-Based Wind - Class",
+    "Small Hydropower Plant (<10MW)": "Hydropower - NPD",
+    "Solar PV (Distributed with Storage)": "PV\+Storage - Class",  # class 2-7
+    "Solar PV (Utility)": "Utility PV - Class",  # class 2-7
 }
 
-#    "Biomass Power Plant": "Biopower",
-#    "CSP with Storage": "CSP",
-#    "CSP without Storage": "CSP",
-#    "Coal Power Plant": "Coal",
-#    "Gas Power Plant (CCGT)": "Natural Gas",
-#    "Gas Power Plant (SCGT)": "Natural Gas",
-#    "Geothermal Power Plant": "Geothermal",
-#    "Large Hydropower Plant (Dam) (>100MW)": "Hydropower",
-    # "Light Fuel Oil Power Plant	": "	-	",
-    # "Light Fuel Oil Standalone Generator (1kW)	": "	-	",
-#    "Medium Hydropower Plant (10-100MW)": "Hydropower",
-#    "Nuclear Power Plant": "Nuclear",
-#    "Offshore Wind": "Offshore Wind",
-    # "Oil Fired Gas Turbine (SCGT)	": "	-	",
-#    "Onshore Wind": "Land-Based Wind",
-#    "Small Hydropower Plant (<10MW)": "Hydropower",
-#    "Solar PV (Distributed with Storage)": "Utility-Scale PV-Plus-Battery",
-#    "Solar PV (Utility)": "Utility PV",
+
+# values: [min, max]
+TECHNO_RANGE_DICT = {
+    # "Biopower - Dedicated": ["const", 0.1],
+    "CSP - Class": [2, 7],
+    # "Coal": "all",
+    # "NG F-Frame CC": "",
+    # "NG F-Frame CT": ["const", 0.1],
+    # "Geothermal": "all",
+    "Pumped Storage Hydropower - National Class": [8, 100],
+    # "Nuclear": "all",
+    "Hydropower - NPD": [5, 7],
+    "Offshore Wind - Class": [2, 4],
+    "Land-Based Wind - Class": [8, 10],
+    "PV\+Storage - Class": [2, 7],
+    "Utility PV - Class": [2, 7],
+}
 
 
 LIFETIME_METRIC = {
     "Biopower - Dedicated": 30,
-    "CSP - Class 3": 30,
+    "CSP - Class": 30,
     "Coal": 35,
     "NG F-Frame CC": 25,
     "NG F-Frame CT": 25,
-    "Geothermal - Hydro / Flash": 25,
-    "Pumped Storage Hydropower - National Class 7": 50,
-    "Hydropower - NPD 6": 50,
-    "Hydropower - NPD 3": 50,
-    "Nuclear - Small Modular Reactor": 50,
-    "Offshore Wind - Class 3": 25,
-    "Land-Based Wind - Class 9": 25,
-    "PV+Storage - Class 4": 24,
-    "Utility PV - Class 4": 24,
+    "Geothermal": 25,
+    "Pumped Storage Hydropower - National Class": 50,
+    "Hydropower - NPD": 50,
+    "Nuclear": 50,
+    "Offshore Wind - Class": 25,
+    "Land-Based Wind - Class": 25,
+    "PV\+Storage - Class": 24,
+    "Utility PV - Class": 24,
 }
 
 YEARS_OF_INTEREST = [2020, 2025, 2030, 2040, 2050]
@@ -137,62 +135,82 @@ class TechnoData:
 
         return truncated_base_data
 
-    def extract_extrema_from_US_database(self):
+    def extract_extrema_from_US_database(self, scenario: str = "Moderate"):
         """
         Fills data with entries from base model.
         """
 
-        # create dataframe to allow conversion and scaling
-        # truncated_US_data_cap = pd.DataFrame(
-        #     columns=["core_metric_variable", "technology_alias", "value"]
-        # )
-
-        truncated_US_data_fix = pd.DataFrame(
-            columns=["core_metric_variable", "technology_alias", "value"]
+        US_data_fix = pd.DataFrame(
+            columns= ["year","fix_mean_US", "fix_min_US", "fix_max_US", "technology"]
         )
 
         # loop over technologies
-        for tech in TECHNO_MAPPING_DICT.values():
+        for code, tech in TECHNO_MAPPING_DICT.items():
             print(tech)
+
             # get relevant rows
             df_US = self.us_data.loc[
-                (self.us_data["display_name"] == tech)
-                & (
-                    self.us_data["core_metric_variable"].isin(YEARS_OF_INTEREST))
-                    & (self.us_data["scenario"] == "Moderate")
-                    & (self.us_data["core_metric_case"] == "R&D")
-                
+                (self.us_data["display_name"].str.contains(tech).fillna(False))
+                & (self.us_data["core_metric_variable"].isin(YEARS_OF_INTEREST))
+                & (self.us_data["scenario"] == scenario)
+                & (self.us_data["core_metric_case"] == "R&D")
+                & (self.us_data["core_metric_parameter"] == "Fixed O&M")
             ]
-
-            df_US_fix = df_US.loc[
-                (self.us_data["core_metric_parameter"] == "Fixed O&M")
-            ]
-
             # decide for lifetime
             # lifetimes given by US database
-            lifetimes_for_tech = np.sort(np.asarray(df_US_fix.crpyears.unique()).astype(int))
-            
+            lifetimes_for_tech = np.sort(
+                np.asarray(df_US.crpyears.unique()).astype(int)
+            )
+
             # get closest to value given base model
-            lifetime_chosen = lifetimes_for_tech[np.argmin(np.abs(lifetimes_for_tech-LIFETIME_METRIC.get(tech)))]
-            
+            lifetime_chosen = lifetimes_for_tech[
+                np.argmin(np.abs(lifetimes_for_tech - LIFETIME_METRIC.get(tech)))
+            ]
+
             # get data with the respective lifetime
-            df_US_fix = df_US_fix.loc[df_US_fix["crpyears"].astype(int)==lifetime_chosen]
+            df_US = df_US.loc[df_US["crpyears"].astype(int) == lifetime_chosen]
 
-        
+            # now get ranges for technologies with multiple classes
+            if tech in TECHNO_RANGE_DICT.keys():
 
-        #     # get relevant columns
-        #     df_US_relevant = df_US[["technology_alias", "core_metric_variable", "", ""]]
+                # get min and max categories
+                min_cat, max_cat = (
+                    TECHNO_RANGE_DICT.get(tech)[0],
+                    TECHNO_RANGE_DICT.get(tech)[1],
+                )
 
-        #     truncated_US_data = self.truncated_base_data.append(df_US_relevant)
+                # create list of potential categories as strings
+                allowed_cat_strings = [
+                    tech + f" {cat}" for cat in np.arange(min_cat, max_cat + 1)
+                ]
 
-        # truncated_US_data = self.truncated_US_data.rename(
-        #     columns={
-        #         "technology_alias": "technology",
-        #         "core_metric_variable": "year",
-        #     }
-        # )
+                # modify dataframe in a way that only those categories are left
+                df_US = df_US.loc[df_US.display_name.isin(allowed_cat_strings)]
 
-        return truncated_US_data_fix
+            # deal with CCS in natural gas plants separately
+            if "NG F-Frame CC" in tech:
+                df_US = df_US.loc[df_US["display_name"] == tech]
+
+            # having done all the filtering and categorisation, we can move on to create our dataframe
+            df_US_grouped = (
+                df_US.groupby("core_metric_variable")
+                .agg({"value": ["mean", "min", "max"]})
+                .pipe(lambda x: x.set_axis(x.columns.map("_".join), axis=1))
+            )
+            df_US_grouped["technology"] = TECHNO_MAPPING_DICT.get(code)
+            df_US_grouped["year"] = df_US_grouped.index
+            df_US_grouped = df_US_grouped.rename(
+                columns={
+                    "value_mean": "fix_mean_US",
+                    "value_min": "fix_min_US",
+                    "value_max": "fix_max_US",
+                }
+            ).reset_index().drop(columns = "core_metric_variable")
+
+            # now append to big dataframe
+            US_data_fix = US_data_fix.append(df_US_grouped)
+
+        return US_data_fix
 
 
 #  "technology",
@@ -211,4 +229,3 @@ test = TechnoData(
 # base_data_sorted = test.extract_mean_from_base_model()
 us_data_sorted = test.extract_extrema_from_US_database()
 breakpoint()
-# test.scaling()
