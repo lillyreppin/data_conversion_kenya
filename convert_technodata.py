@@ -16,7 +16,7 @@ TECHNO_MAPPING_DICT = {
     # "Light Fuel Oil Power Plant	": "	-	",
     # "Light Fuel Oil Standalone Generator (1kW)	": "	-	",
     "Medium Hydropower Plant (10-100MW)": "Hydropower - NPD",
-    "Nuclear Power Plant": "Nuclear",
+    # "Nuclear Power Plant": "Nuclear",
     "Offshore Wind": "Offshore Wind - Class",
     # "Oil Fired Gas Turbine (SCGT)	": "	-	",
     "Onshore Wind": "Land-Based Wind - Class",
@@ -64,12 +64,14 @@ YEARS_OF_INTEREST = [2020, 2025, 2030, 2040, 2050]
 
 
 class TechnoData:
-    def __init__(self, path_to_base_input: str, path_to_us_database: str):
+    def __init__(self, path_to_base_input: str, path_to_cap_input: str, path_to_us_database: str):
         self.path_to_base_input = path_to_base_input
+        self.path_to_cap_input = path_to_cap_input
         self.path_to_us_database = path_to_us_database
 
         # read in csv files
         self.base_input_data = pd.read_csv(self.path_to_base_input)
+        self.cap_input_data = pd.read_csv(self.path_to_cap_input, sep = ";")
         self.us_data = pd.read_csv(self.path_to_us_database)
 
         # create dataframe to allow conversion and scaling
@@ -135,18 +137,19 @@ class TechnoData:
 
         return truncated_base_data
 
-    def extract_extrema_from_US_database(self, scenario: str = "Moderate"):
+    #def extract_extrema_from_US_database(self, scenario: str = "Moderate"):
+    def extract_extrema_from_US_database(self, scenario):
         """
         Fills data with entries from base model.
         """
-
+        print("Scenario: " + scenario)
         US_data_fix = pd.DataFrame(
             columns= ["year","fix_mean_US", "fix_min_US", "fix_max_US", "technology"]
         )
 
         # loop over technologies
         for code, tech in TECHNO_MAPPING_DICT.items():
-            print(tech)
+            # print(tech)
 
             # get relevant rows
             df_US = self.us_data.loc[
@@ -163,9 +166,15 @@ class TechnoData:
             )
 
             # get closest to value given base model
+
+            #print(lifetimes_for_tech)
+            #print(LIFETIME_METRIC.get(tech))
+            
             lifetime_chosen = lifetimes_for_tech[
                 np.argmin(np.abs(lifetimes_for_tech - LIFETIME_METRIC.get(tech)))
             ]
+
+            # print(lifetime_chosen)
 
             # get data with the respective lifetime
             df_US = df_US.loc[df_US["crpyears"].astype(int) == lifetime_chosen]
@@ -197,8 +206,9 @@ class TechnoData:
                 .agg({"value": ["mean", "min", "max"]})
                 .pipe(lambda x: x.set_axis(x.columns.map("_".join), axis=1))
             )
-            df_US_grouped["technology"] = TECHNO_MAPPING_DICT.get(code)
+            df_US_grouped["technology"] = code
             df_US_grouped["year"] = df_US_grouped.index
+            df_US_grouped["US_scenario"] = scenario
             df_US_grouped = df_US_grouped.rename(
                 columns={
                     "value_mean": "fix_mean_US",
@@ -213,19 +223,48 @@ class TechnoData:
         return US_data_fix
 
 
-#  "technology",
-# "year",
-# "cap_mean_base",
-# "fix_mean_base",
+    def merge_base_us_dataframes(self):
+        """
+        Merge the US data base frame and the technology data frame for the Kenya base model according to year and 'technology'.
+        """
+
+        base_data_sorted = self.extract_mean_from_base_model()
+
+        # generate base frame
+        final_techno_data = pd.DataFrame(columns=["year","fix_mean_US", "fix_min_US", "fix_max_US", "technology"])
+
+        # generate US frames for all scenarios
+        scenarios = ['Moderate', 'Advanced', 'Conservative']
+        for scenario in scenarios:
+            us_data_sorted = test.extract_extrema_from_US_database(scenario)
+            final_techno_data = final_techno_data.append(us_data_sorted)
+
+        # merge all frames based on year and technology
+        end_data = base_data_sorted.merge(final_techno_data, how = "left", on = ["technology", "year"])
+
+        # save final output in class
+        return end_data
+    
+    def add_cap_input_to_end_data(self):
+        """
+        Merge capital costs to final data frame. 
+        """
+
+        end_data_without_cap = self.merge_base_us_dataframes()
+        cap_input = self.cap_input_data.copy()
+
+        # merge cap frame with end_data frame based on year, technology and scenario
+        cap_input_final = end_data_without_cap.merge(cap_input, how = "left", on = ["technology", "year", "US_scenario"])
+
+        return cap_input_final
 
 
 PATH_BASE_INPUT = "/Users/lilly/MUSE-starter-kits-converter-main/data/processed/kenya_scenarios/Kenya/base/technodata/power"
+PATH_CAP_INPUT = "/Users/lilly/Documents/diploma_thesis/data"
 PATH_US_DATABASE = "/Users/lilly/norm"
 test = TechnoData(
     path_to_base_input=os.path.join(PATH_BASE_INPUT, "Technodata.csv"),
+    path_to_cap_input=os.path.join(PATH_CAP_INPUT, "cap_cost_US.csv"),
     path_to_us_database=os.path.join(PATH_US_DATABASE, "ATB2022.csv"),
 )
-
-# base_data_sorted = test.extract_mean_from_base_model()
-us_data_sorted = test.extract_extrema_from_US_database()
-breakpoint()
+cap_input_final = test.add_cap_input_to_end_data()
