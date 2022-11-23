@@ -265,6 +265,8 @@ class TechnoData:
 
         cap_input_final = test.add_cap_input_to_end_data()
         
+        # calculate the factor to scale min/max values for capital and fixed costs
+        # save the factors in new column
         cap_input_final["cap_factor"] = cap_input_final.apply(lambda row: row.cap_mean_base / row.cap_mean_US, axis = 1)
         cap_input_final["fix_factor"] = cap_input_final.apply(lambda row: row.fix_mean_base / row.fix_mean_US, axis = 1)
         cap_input_final["cap_min_final"] = cap_input_final["cap_min_US"] * cap_input_final["cap_factor"]
@@ -272,6 +274,7 @@ class TechnoData:
         cap_input_final["fix_min_final"] = cap_input_final["fix_min_US"] * cap_input_final["fix_factor"]
         cap_input_final["fix_max_final"] = cap_input_final["fix_max_US"] * cap_input_final["fix_factor"]
 
+        # save final technodata input file
         cap_input_final.to_csv("final_cap_var_extrema.csv")
         return cap_input_final
 
