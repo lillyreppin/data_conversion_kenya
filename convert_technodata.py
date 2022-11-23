@@ -131,7 +131,7 @@ class TechnoData:
                 "ProcessName": "technology",
                 "Time": "year",
                 "cap_par": "cap_mean_base",
-                "fix_cap": "fix_mean_base",
+                "fix_par": "fix_mean_base",
             }
         )
 
@@ -258,6 +258,23 @@ class TechnoData:
 
         return cap_input_final
 
+    def scale_data(self):
+        """
+        Scale data of capital and fixed costs for min and max values based on comparison of mean values from US and Kenya data.
+        """
+
+        cap_input_final = test.add_cap_input_to_end_data()
+        
+        cap_input_final["cap_factor"] = cap_input_final.apply(lambda row: row.cap_mean_base / row.cap_mean_US, axis = 1)
+        cap_input_final["fix_factor"] = cap_input_final.apply(lambda row: row.fix_mean_base / row.fix_mean_US, axis = 1)
+        cap_input_final["cap_min_final"] = cap_input_final["cap_min_US"] * cap_input_final["cap_factor"]
+        cap_input_final["cap_max_final"] = cap_input_final["cap_max_US"] * cap_input_final["cap_factor"]
+        cap_input_final["fix_min_final"] = cap_input_final["fix_min_US"] * cap_input_final["fix_factor"]
+        cap_input_final["fix_max_final"] = cap_input_final["fix_max_US"] * cap_input_final["fix_factor"]
+
+        cap_input_final.to_csv("final_cap_var_extrema.csv")
+        return cap_input_final
+
 
 PATH_BASE_INPUT = "/Users/lilly/MUSE-starter-kits-converter-main/data/processed/kenya_scenarios/Kenya/base/technodata/power"
 PATH_CAP_INPUT = "/Users/lilly/Documents/diploma_thesis/data"
@@ -267,4 +284,5 @@ test = TechnoData(
     path_to_cap_input=os.path.join(PATH_CAP_INPUT, "cap_cost_US.csv"),
     path_to_us_database=os.path.join(PATH_US_DATABASE, "ATB2022.csv"),
 )
-cap_input_final = test.add_cap_input_to_end_data()
+
+final_data_frame = test.scale_data()
