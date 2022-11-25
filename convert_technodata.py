@@ -21,7 +21,7 @@ TECHNO_MAPPING_DICT = {
     # "Oil Fired Gas Turbine (SCGT)	": "	-	",
     "Onshore Wind": "Land-Based Wind - Class",
     "Small Hydropower Plant (<10MW)": "Hydropower - NPD",
-    "Solar PV (Distributed with Storage)": "PV\+Storage - Class",  # class 2-7
+    "Solar PV (Distributed with Storage)": "PV Storage - Class",  # class 2-7
     "Solar PV (Utility)": "Utility PV - Class",  # class 2-7
 }
 
@@ -29,18 +29,20 @@ TECHNO_MAPPING_DICT = {
 # values: [min, max]
 TECHNO_RANGE_DICT = {
     # "Biopower - Dedicated": ["const", 0.1],
-    "CSP - Class": [2, 7],
+    "CSP with Storage": [2, 7],
+    "CSP without Storage": [2, 7],
     # "Coal": "all",
     # "NG F-Frame CC": "",
     # "NG F-Frame CT": ["const", 0.1],
     # "Geothermal": "all",
-    "Pumped Storage Hydropower - National Class": [8, 100],
+    "Large Hydropower Plant (Dam) (>100MW)": [8, 100],
     # "Nuclear": "all",
-    "Hydropower - NPD": [5, 7],
-    "Offshore Wind - Class": [2, 4],
-    "Land-Based Wind - Class": [8, 10],
-    "PV\+Storage - Class": [2, 7],
-    "Utility PV - Class": [2, 7],
+    "Medium Hydropower Plant (10-100MW)": [5, 7],
+    "Small Hydropower Plant (<10MW)": [1, 3],
+    "Offshore Wind": [2, 4],
+    "Onshore Wind": [8, 10],
+    "Solar PV (Distributed with Storage)": [2, 7],
+    "Solar PV (Utility)": [2, 7],
 }
 
 
@@ -56,23 +58,28 @@ LIFETIME_METRIC = {
     "Nuclear": 50,
     "Offshore Wind - Class": 25,
     "Land-Based Wind - Class": 25,
-    "PV\+Storage - Class": 24,
+    "PV Storage - Class": 24,
     "Utility PV - Class": 24,
 }
 
-YEARS_OF_INTEREST = [2020, 2025, 2030, 2040, 2050]
+# without 2020 that base year stays the same
+YEARS_OF_INTEREST = [2025, 2030, 2040, 2050]
 
 
 class TechnoData:
-    def __init__(self, path_to_base_input: str, path_to_cap_input: str, path_to_us_database: str):
+    def __init__(
+        self, path_to_base_input: str, path_to_cap_input: str, path_to_us_database: str
+    ):
         self.path_to_base_input = path_to_base_input
         self.path_to_cap_input = path_to_cap_input
         self.path_to_us_database = path_to_us_database
 
         # read in csv files
         self.base_input_data = pd.read_csv(self.path_to_base_input)
-        self.cap_input_data = pd.read_csv(self.path_to_cap_input, sep = ";")
+        self.cap_input_data = pd.read_csv(self.path_to_cap_input, sep=";")
         self.us_data = pd.read_csv(self.path_to_us_database)
+        # handle special characters in US data
+        self.us_data.display_name = self.us_data.display_name.str.replace("+", " ")
 
         # create dataframe to allow conversion and scaling
         self.scaling_df = pd.DataFrame(
@@ -137,20 +144,20 @@ class TechnoData:
 
         return truncated_base_data
 
-    #def extract_extrema_from_US_database(self, scenario: str = "Moderate"):
+    # def extract_extrema_from_US_database(self, scenario: str = "Advanced") -> change if you want to have a specific scenario
     def extract_extrema_from_US_database(self, scenario):
         """
         Fills data with entries from base model.
         """
         print("Scenario: " + scenario)
         US_data_fix = pd.DataFrame(
-            columns= ["year","fix_mean_US", "fix_min_US", "fix_max_US", "technology"]
+            columns=["year", "fix_mean_US", "fix_min_US", "fix_max_US", "technology"]
         )
 
         # loop over technologies
         for code, tech in TECHNO_MAPPING_DICT.items():
-            # print(tech)
 
+            print(tech)
             # get relevant rows
             df_US = self.us_data.loc[
                 (self.us_data["display_name"].str.contains(tech).fillna(False))
@@ -166,15 +173,9 @@ class TechnoData:
             )
 
             # get closest to value given base model
-
-            #print(lifetimes_for_tech)
-            #print(LIFETIME_METRIC.get(tech))
-            
             lifetime_chosen = lifetimes_for_tech[
                 np.argmin(np.abs(lifetimes_for_tech - LIFETIME_METRIC.get(tech)))
             ]
-
-            # print(lifetime_chosen)
 
             # get data with the respective lifetime
             df_US = df_US.loc[df_US["crpyears"].astype(int) == lifetime_chosen]
@@ -209,19 +210,22 @@ class TechnoData:
             df_US_grouped["technology"] = code
             df_US_grouped["year"] = df_US_grouped.index
             df_US_grouped["US_scenario"] = scenario
-            df_US_grouped = df_US_grouped.rename(
-                columns={
-                    "value_mean": "fix_mean_US",
-                    "value_min": "fix_min_US",
-                    "value_max": "fix_max_US",
-                }
-            ).reset_index().drop(columns = "core_metric_variable")
+            df_US_grouped = (
+                df_US_grouped.rename(
+                    columns={
+                        "value_mean": "fix_mean_US",
+                        "value_min": "fix_min_US",
+                        "value_max": "fix_max_US",
+                    }
+                )
+                .reset_index()
+                .drop(columns="core_metric_variable")
+            )
 
             # now append to big dataframe
             US_data_fix = US_data_fix.append(df_US_grouped)
 
         return US_data_fix
-
 
     def merge_base_us_dataframes(self):
         """
@@ -231,30 +235,37 @@ class TechnoData:
         base_data_sorted = self.extract_mean_from_base_model()
 
         # generate base frame
-        final_techno_data = pd.DataFrame(columns=["year","fix_mean_US", "fix_min_US", "fix_max_US", "technology"])
+        final_techno_data = pd.DataFrame(
+            columns=["year", "fix_mean_US", "fix_min_US", "fix_max_US", "technology"]
+        )
 
         # generate US frames for all scenarios
-        scenarios = ['Moderate', 'Advanced', 'Conservative']
+        scenarios = ["Moderate", "Advanced", "Conservative"]
+        # scenarios = ['Advanced'] -> change for specific scenario
         for scenario in scenarios:
-            us_data_sorted = test.extract_extrema_from_US_database(scenario)
+            us_data_sorted = self.extract_extrema_from_US_database(scenario)
             final_techno_data = final_techno_data.append(us_data_sorted)
 
         # merge all frames based on year and technology
-        end_data = base_data_sorted.merge(final_techno_data, how = "left", on = ["technology", "year"])
+        end_data = base_data_sorted.merge(
+            final_techno_data, how="left", on=["technology", "year"]
+        )
 
         # save final output in class
         return end_data
-    
+
     def add_cap_input_to_end_data(self):
         """
-        Merge capital costs to final data frame. 
+        Merge capital costs to final data frame.
         """
 
         end_data_without_cap = self.merge_base_us_dataframes()
         cap_input = self.cap_input_data.copy()
 
         # merge cap frame with end_data frame based on year, technology and scenario
-        cap_input_final = end_data_without_cap.merge(cap_input, how = "left", on = ["technology", "year", "US_scenario"])
+        cap_input_final = end_data_without_cap.merge(
+            cap_input, how="left", on=["technology", "year", "US_scenario"]
+        )
 
         return cap_input_final
 
@@ -263,16 +274,28 @@ class TechnoData:
         Scale data of capital and fixed costs for min and max values based on comparison of mean values from US and Kenya data.
         """
 
-        cap_input_final = test.add_cap_input_to_end_data()
-        
+        cap_input_final = self.add_cap_input_to_end_data()
+
         # calculate the factor to scale min/max values for capital and fixed costs
         # save the factors in new column
-        cap_input_final["cap_factor"] = cap_input_final.apply(lambda row: row.cap_mean_base / row.cap_mean_US, axis = 1)
-        cap_input_final["fix_factor"] = cap_input_final.apply(lambda row: row.fix_mean_base / row.fix_mean_US, axis = 1)
-        cap_input_final["cap_min_final"] = cap_input_final["cap_min_US"] * cap_input_final["cap_factor"]
-        cap_input_final["cap_max_final"] = cap_input_final["cap_max_US"] * cap_input_final["cap_factor"]
-        cap_input_final["fix_min_final"] = cap_input_final["fix_min_US"] * cap_input_final["fix_factor"]
-        cap_input_final["fix_max_final"] = cap_input_final["fix_max_US"] * cap_input_final["fix_factor"]
+        cap_input_final["cap_factor"] = cap_input_final.apply(
+            lambda row: row.cap_mean_base / row.cap_mean_US, axis=1
+        )
+        cap_input_final["fix_factor"] = cap_input_final.apply(
+            lambda row: row.fix_mean_base / row.fix_mean_US, axis=1
+        )
+        cap_input_final["cap_min_final"] = (
+            cap_input_final["cap_min_US"] * cap_input_final["cap_factor"]
+        )
+        cap_input_final["cap_max_final"] = (
+            cap_input_final["cap_max_US"] * cap_input_final["cap_factor"]
+        )
+        cap_input_final["fix_min_final"] = (
+            cap_input_final["fix_min_US"] * cap_input_final["fix_factor"]
+        )
+        cap_input_final["fix_max_final"] = (
+            cap_input_final["fix_max_US"] * cap_input_final["fix_factor"]
+        )
 
         # save final technodata input file
         cap_input_final.to_csv("final_cap_var_extrema.csv")
