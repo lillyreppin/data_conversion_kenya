@@ -44,9 +44,7 @@ class Scenarios:
 
             # for-loop scenario generation
             for num in range(0, n_scenarios):
-                scenario_path_final = (
-                    scenario_path + f"{US_scenario}_" + str(num)
-                )
+                scenario_path_final = scenario_path + f"{US_scenario}_" + str(num)
                 if not os.path.exists(scenario_path_final):
                     os.mkdir(scenario_path_final)
 
@@ -79,7 +77,13 @@ class Scenarios:
                 technodata_final = pd.merge(
                     left=technodata,
                     right=extrema_input_scenario_chosen[
-                        ["ProcessName", "Time", "cap_random", "fix_random", "US_scenario"]
+                        [
+                            "ProcessName",
+                            "Time",
+                            "cap_random",
+                            "fix_random",
+                            "US_scenario",
+                        ]
                     ],
                     how="left",
                     left_on=["ProcessName", "Time"],
