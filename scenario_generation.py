@@ -13,7 +13,7 @@ class Scenarios:
         self.extrema_input_data = pd.read_csv(self.path_to_extrema_input)
         self.base_input_data = pd.read_csv(self.path_to_base_input)
 
-    def scenario_generation(self, n_scenarios: int = 3):
+    def scenario_generation(self, n_scenarios: int = []):
         """
         Generate a specific number of scenarios for each US_scenario and randomize the values for capital (and fixed) costs.
         """
@@ -35,8 +35,8 @@ class Scenarios:
         base_input = self.base_input_data.copy()
 
         # give path for scenarios
-        scenario_path = r"/Users/lilly/muse_kenya/run/Scenarios/"
-        source_path = r"/Users/lilly/muse_kenya/run/Kenya/base"
+        scenario_path = r"../../../"
+        source_path = r"../../../"
 
         scenarios = extrema_input.US_scenario.unique().tolist()
 
@@ -45,9 +45,8 @@ class Scenarios:
             # for-loop scenario generation
             for num in range(0, n_scenarios):
                 scenario_path_final = (
-                    scenario_path + f"Scenario_{US_scenario}_" + str(num)
+                    scenario_path + f"{US_scenario}_" + str(num)
                 )
-                # os.mkdir(scenario_path + "Scenario_" + str(num))
                 if not os.path.exists(scenario_path_final):
                     os.mkdir(scenario_path_final)
 
@@ -65,8 +64,8 @@ class Scenarios:
 
                 # in technodata file: randomize cap_par according to cap_random
                 path_techno_data = (
-                    "/Users/lilly/muse_kenya/run/Scenarios/"
-                    + f"Scenario_{US_scenario}_"
+                    "../../../"
+                    + f"{US_scenario}_"
                     + str(num)
                     + "/technodata/power/Technodata.csv"
                 )
@@ -76,11 +75,11 @@ class Scenarios:
                     extrema_input.US_scenario == US_scenario
                 ]
 
-                # change column "cap_par" in technodata.csv
+                # change columns "cap_par" and "fix_par" technodata.csv
                 technodata_final = pd.merge(
                     left=technodata,
                     right=extrema_input_scenario_chosen[
-                        ["ProcessName", "Time", "cap_random", "US_scenario"]
+                        ["ProcessName", "Time", "cap_random", "fix_random", "US_scenario"]
                     ],
                     how="left",
                     left_on=["ProcessName", "Time"],
@@ -92,8 +91,13 @@ class Scenarios:
                     technodata_final["cap_random"],
                     technodata_final["cap_par"],
                 )
+                technodata_final["fix_par"] = np.where(
+                    technodata_final["fix_random"] > 0,
+                    technodata_final["fix_random"],
+                    technodata_final["fix_par"],
+                )
                 technodata_final = technodata_final.drop(
-                    columns=["US_scenario", "cap_random"]
+                    columns=["US_scenario", "cap_random", "fix_random"]
                 )
 
                 print(technodata_final)
@@ -104,8 +108,8 @@ class Scenarios:
         return self
 
 
-PATH_EXTREMA_INPUT = "/Users/lilly/data_conversion_kenya/"
-PATH_BASE_INPUT = "/Users/lilly/muse_kenya/run/Kenya/base/technodata/power"
+PATH_EXTREMA_INPUT = "../../../"
+PATH_BASE_INPUT = "../../../"
 scenario_input = Scenarios(
     path_to_extrema_input=os.path.join(PATH_EXTREMA_INPUT, "final_cap_var_extrema.csv"),
     path_to_base_input=os.path.join(PATH_BASE_INPUT, "Technodata.csv"),
