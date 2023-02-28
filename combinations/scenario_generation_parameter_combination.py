@@ -6,15 +6,17 @@ import shutil
 
 
 class Scenarios:
-    def __init__(self, path_to_cost_input: str, path_to_base_input: str, path_to_lifetime_input: str, path_to_capacity_input: str):
+    def __init__(self, path_to_base_input: str, path_to_capacity_input: str, path_to_cost_input: str, path_to_efficiency_input: str, path_to_lifetime_input: str):
         self.path_to_base_input = path_to_base_input
         self.path_to_capacity_input = path_to_capacity_input
         self.path_to_cost_input = path_to_cost_input
+        self.path_to_efficiency_input = path_to_efficiency_input
         self.path_to_lifetime_input = path_to_lifetime_input
         # read in csv files
         self.base_input_data = pd.read_csv(self.path_to_base_input)
         self.capacity_input_data = pd.read_csv(self.path_to_capacity_input)
         self.cost_input_data = pd.read_csv(self.path_to_cost_input)
+        self.efficiency_input_data = pd.read_csv(self.path_to_efficiency_input)
         self.lifetime_input_data = pd.read_csv(self.path_to_lifetime_input)
 
     def scenario_generation(self, n_scenarios: int = []):
@@ -24,6 +26,7 @@ class Scenarios:
 
         capacity_input = self.capacity_input_data.copy()
         cost_input = self.cost_input_data.copy()
+        efficiency_input = self.efficiency_input_data.copy()
         lifetime_input = self.lifetime_input_data.copy()
 
         # delete first empty column and rename cost_input based on technodata column names
@@ -36,6 +39,8 @@ class Scenarios:
         cap_max_final = cost_input["cap_max_final"]
         fix_min_final = cost_input["fix_min_final"]
         fix_max_final = cost_input["fix_max_final"]
+        efficiency_min = efficiency_input["efficiency"]
+        efficiency_max = efficiency_input["efficiency_mod"]
         lifetime_min = lifetime_input["TechnicalLife"]
         lifetime_max = lifetime_input["TechnicalLife_mod"]
 
@@ -64,7 +69,10 @@ class Scenarios:
                 cost_input["fix_random"] = random.uniform(
                     fix_min_final, fix_max_final
                 )
-
+                # randomise efficiency
+                efficiency_input["efficiency_random"] = random.uniform(
+                efficiency_min, efficiency_max
+                )
                 # randomise lifetime
                 lifetime_input["TechnicalLife_random"] = random.uniform(
                     lifetime_min, lifetime_max
@@ -149,21 +157,44 @@ class Scenarios:
 
                 technodata_final3 = technodata_final3.drop(
                     columns=["MaxCapacityAddition_mod", "MaxCapacityGrowth_mod"]
-                )                           
+                )   
+
+                # in techno data file: randomise "efficiency" according to "efficiency_random"
+                efficiency_input = efficiency_input.astype({"Time": str})
+                technodata_final4 = pd.merge(
+                    left=technodata_final3,
+                    right=efficiency_input[
+                        ["ProcessName", "Time", "efficiency_random"]
+                    ],
+                    how="left",
+                    left_on=["ProcessName", "Time"],
+                    right_on=["ProcessName", "Time"],
+                )
+                
+                technodata_final4["efficiency"] = np.where(
+                    technodata_final4["efficiency_random"] > 0,
+                    technodata_final4["efficiency_random"],
+                    technodata_final4["efficiency"],
+                )
+                technodata_final4 = technodata_final4.drop(
+                    columns=["efficiency_random"]
+                )                        
 
                 os.remove(path_techno_data)
-                technodata_final3.to_csv(path_techno_data)
+                technodata_final4.to_csv(path_techno_data)
 
         return self
 
 PATH_BASE_INPUT = "/../../.." # add the path
 PATH_CAPACITY_INPUT = "/../../.." # add the path
 PATH_COST_INPUT = "/../../.." # add the path
+PATH_EFFICIENCY_INPUT = "/../../.." # add the path
 PATH_LIFETIME_INPUT = "/../../.." # add the path
 scenario_input = Scenarios(
     path_to_base_input=os.path.join(PATH_BASE_INPUT, "..."), # add the file
     path_to_capacity_input=os.path.join(PATH_CAPACITY_INPUT, "..."), # add the file
     path_to_cost_input=os.path.join(PATH_COST_INPUT, "..."), # add the file
+    path_to_efficiency_input=os.path.join(PATH_EFFICIENCY_INPUT, "..."), # add the file
     path_to_lifetime_input=os.path.join(PATH_LIFETIME_INPUT, "..."), # add the file
 )
 
