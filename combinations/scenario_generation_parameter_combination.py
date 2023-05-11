@@ -21,7 +21,7 @@ class Scenarios:
 
     def scenario_generation(self, n_scenarios: int = []):
         """
-        Generate a specific number of scenarios for selected US_scenario, randomise the values for capital and fixed costs as well as lifetime.
+        Generate a specific number of scenarios for selected US_scenario, randomise the values for capital and fixed costs as well as lifetime, capacity and efficiency.
         """
 
         capacity_input = self.capacity_input_data.copy()
