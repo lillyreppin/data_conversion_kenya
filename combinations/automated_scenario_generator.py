@@ -33,11 +33,12 @@ class Scenarios:
 
     def scenario_generation(self, n_scenarios: int = 1):
         """
+        Combinations.txt for scenario overview necessary!
         Generate a specific number of scenarios and randomise the values for capital and fixed costs, lifetime, utilisation factor and efficiency to +/-30% as well as the capacity for fossil fuels to 0 from 2030 onwards.
         Additional options: randomise the energy demand, implement CCS technologies and a carbon price.
         """
 
-        # technologys in the Kenya base model
+        # technologies in the Kenya base model
         CCS_tech = [
             "Biomass Power Plant",
             "Coal Power Plant",
@@ -79,7 +80,6 @@ class Scenarios:
             combinations = file.read().splitlines()
 
         # give path for scenarios
-        #scenario_path = r"/Users/lilly/muse_kenya/run/costs_capacityThirty_utilisationFactor/"  # CHANGE PATH
         source_path = r"/Users/lilly/muse_kenya/run/Kenya/base/"
 
         # for-loop scenario generation path
@@ -87,7 +87,7 @@ class Scenarios:
             # Create scenario directory
             words = combination.split(" - ")
             words_with_underscore = "_".join(words)
-            scenario_path = f"/Users/lilly/muse_kenya/run/test/{words_with_underscore}/"  # CHANGE PATH
+            scenario_path = f"/Users/lilly/muse_kenya/run/test/{words_with_underscore}/" 
             os.makedirs(scenario_path, exist_ok=True)
 
             # for-loop scenario generation
@@ -108,9 +108,9 @@ class Scenarios:
 
                     CommIn_base = self.CCS_CommIn_input.copy().drop(0)
                     CCS_CommIn = self.CCS_CommIn_input.copy()
+                    CCS_CommIn = CCS_CommIn.loc[CCS_CommIn.ProcessName.isin(CCS_tech)]
                     unit_row = pd.read_csv(path_CCS_CommIn, nrows=1)
 
-                    CCS_CommIn = CCS_CommIn.loc[CCS_CommIn.ProcessName.isin(CCS_tech)]
                     # add "CCS " to the beginning of the values in the "ProcessName" column
                     CCS_CommIn.loc[CCS_CommIn["ProcessName"].isin(CCS_tech), "ProcessName"] = 'CCS ' + CCS_CommIn.loc[CCS_CommIn["ProcessName"].isin(CCS_tech), "ProcessName"].astype(str)
                     CCS_CommIn[["biomass", "coal", "gas", "HFO", "LFO"]] = CCS_CommIn[["biomass", "coal", "gas", "HFO", "LFO"]].astype(float)
@@ -129,15 +129,14 @@ class Scenarios:
 
                     CommOut_base = self.CCS_CommOut_input.copy().drop(0)
                     CCS_CommOut = self.CCS_CommOut_input.copy()
+                    CCS_CommOut = CCS_CommOut.loc[CCS_CommOut.ProcessName.isin(CCS_tech)]
                     unit_row = pd.read_csv(path_CCS_CommOut, nrows=1)
                     commodities = self.commodity_input.copy()
 
-                    CCS_CommOut = CCS_CommOut.loc[CCS_CommOut.ProcessName.isin(CCS_tech)]
                     # add "CCS " to the beginning of the values in the "ProcessName" column
                     CCS_CommOut.loc[CCS_CommOut["ProcessName"].isin(CCS_tech), "ProcessName"] = 'CCS ' + CCS_CommOut.loc[CCS_CommOut["ProcessName"].isin(CCS_tech), "ProcessName"].astype(str)
                     CCS_CommOut[["biomass", "coal", "gas", "HFO", "LFO"]] = CCS_CommOut[["biomass", "coal", "gas", "HFO", "LFO"]].astype(float)
 
-                    #CCS_CommOut.loc[CCS_CommOut['ProcessName'] == 'CCS Biomass Power Plant', 'CO2f'] = (CCS_CommIn.loc[CCS_CommIn['ProcessName'] == 'CCS Biomass Power Plant', 'CO2f'].astype(float)*(1+0.32)) * commodities.loc[commodities['Commodity'] == 'Biomass', 'CommodityEmissionFactor_CO2'].astype(float) * (-1)
                     # Loop through each row in CCS_CommOut
                     for idx, row in CCS_CommOut.iterrows():
                         # Check if the 'ProcessName' column value is 'CCS Biomass Power Plant'
@@ -171,8 +170,8 @@ class Scenarios:
                     CCS_existing_capacity = self.existing_capacity_input.copy()
                     unit_row = pd.read_csv(path_existing_capacity, nrows=1)
 
-                    CCS_existing_capacity = CCS_existing_capacity.loc[CCS_existing_capacity.ProcessName.isin(CCS_tech)]
                     # add "CCS " to the beginning of the values in the "ProcessName" column
+                    CCS_existing_capacity = CCS_existing_capacity.loc[CCS_existing_capacity.ProcessName.isin(CCS_tech)]
                     CCS_existing_capacity.loc[CCS_existing_capacity["ProcessName"].isin(CCS_tech), "ProcessName"] = 'CCS ' + CCS_existing_capacity.loc[CCS_existing_capacity["ProcessName"].isin(CCS_tech), "ProcessName"].astype(str)
 
                     os.remove(path_existing_capacity)
@@ -189,8 +188,8 @@ class Scenarios:
                     CCS_technodata = self.technodata_input.copy()
                     unit_row = pd.read_csv(path_technodata, nrows=1)
 
-                    CCS_technodata = CCS_technodata.loc[CCS_technodata.ProcessName.isin(CCS_tech)]
                     # add "CCS " to the beginning of the values in the "ProcessName" column
+                    CCS_technodata = CCS_technodata.loc[CCS_technodata.ProcessName.isin(CCS_tech)]
                     CCS_technodata.loc[CCS_technodata["ProcessName"].isin(CCS_tech), "ProcessName"] = 'CCS ' + CCS_technodata.loc[CCS_technodata["ProcessName"].isin(CCS_tech), "ProcessName"].astype(str)
 
                     os.remove(path_technodata)
@@ -207,8 +206,8 @@ class Scenarios:
                     CCS_timeslices = self.timeslices_input.copy()
                     unit_row = pd.read_csv(path_timeslices, nrows=1)
 
-                    CCS_timeslices = CCS_timeslices.loc[CCS_timeslices.ProcessName.isin(CCS_tech)]
                     # add "CCS " to the beginning of the values in the "ProcessName" column
+                    CCS_timeslices = CCS_timeslices.loc[CCS_timeslices.ProcessName.isin(CCS_tech)]
                     CCS_timeslices.loc[CCS_timeslices["ProcessName"].isin(CCS_tech), "ProcessName"] = 'CCS ' + CCS_timeslices.loc[CCS_timeslices["ProcessName"].isin(CCS_tech), "ProcessName"].astype(str)
 
                     os.remove(path_timeslices)
@@ -226,7 +225,7 @@ class Scenarios:
                 technodata_final = technodata.copy().drop(0)
 
                 if "costs" in scenario_path_final:
-                    # change costs
+                    # change fixed and variable costs
                     technodata_final["cap_par"] = technodata_final["cap_par"].astype(float)
                     technodata_final["fix_par"] = technodata_final["fix_par"].astype(float)
                     
@@ -293,7 +292,7 @@ class Scenarios:
                         capacity_shut_down = ["2030", "2035", "2040", "2045", "2050"]
                     if "capacityForty" in scenario_path_final:
                         capacity_shut_down = ["2040", "2045", "2050"]
-                    # change capacity
+                    # change capacity according to shut down year
                     technodata_final["MaxCapacityAddition"] = technodata_final["MaxCapacityAddition"].astype(float)
                     technodata_final["MaxCapacityGrowth"] = technodata_final["MaxCapacityGrowth"].astype(float)
 
@@ -369,7 +368,6 @@ class Scenarios:
                 
                 if any(scenario in scenario_path_final for scenario in ['C30-const', 'C80-const', 'C30-gr5', 'C80-gr5']):
                     # implement carbon price
-
                     path_carbon_price = (
                         scenario_path_final
                         + "/input/Projections.csv"
