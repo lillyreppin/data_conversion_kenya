@@ -74,20 +74,20 @@ class Scenarios:
         ]
 
         # Read scenario combinations from file
-        combinations_file = "/Users/lilly/muse_kenya/combinations.txt"
+        combinations_file = ".../data_conversion_kenya/combinations/combinations.txt"
 
         with open(combinations_file, "r") as file:
             combinations = file.read().splitlines()
 
         # give path for scenarios
-        source_path = r"/Users/lilly/muse_kenya/run/Kenya/base/"
+        source_path = r"/../../../"
 
         # for-loop scenario generation path
         for i, combination in enumerate(combinations):
             # Create scenario directory
             words = combination.split(" - ")
             words_with_underscore = "_".join(words)
-            scenario_path = f"/Users/lilly/muse_kenya/run/test/{words_with_underscore}/" 
+            scenario_path = f"/../../../{words_with_underscore}/" 
             os.makedirs(scenario_path, exist_ok=True)
 
             # for-loop scenario generation
