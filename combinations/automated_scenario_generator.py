@@ -298,11 +298,38 @@ class Scenarios:
 
                     technodata_final["MaxCapacityAddition"].loc[technodata_final.ProcessName.isin(fossil) & technodata_final.Time.isin(capacity_shut_down)] = 0 
                     technodata_final["MaxCapacityGrowth"].loc[technodata_final.ProcessName.isin(fossil) & technodata_final.Time.isin(capacity_shut_down)] = 0
-
+                
                 # save new technodata file with all changes
                 os.remove(path_techno_data)
                 technodata_final = pd.concat([unit_row, technodata_final], ignore_index = True)
                 technodata_final.to_csv(path_techno_data, index=False)
+
+                if "ccs" in scenario_path_final:
+                    # copy modified CO2 emission technologies and add "CCS " to ProcessName
+                    path_technodata = (
+                        scenario_path_final
+                        + "/technodata/power/Technodata.csv"
+                    )
+
+                    technodata_scen = pd.read_csv(path_techno_data)
+                    technodata_base = technodata_scen.copy().drop(0)
+                    CCS_technodata_scen = pd.read_csv(path_techno_data)
+                    CCS_technodata = CCS_technodata_scen.copy().drop(0)
+                    unit_row = pd.read_csv(path_technodata, nrows=1)
+
+                    # Filter rows where ProcessName starts with "CCS "
+                    ccs_rows = technodata_base[technodata_base['ProcessName'].str.startswith('CCS ')]
+
+                    # Drop the CCS rows from the DataFrame
+                    technodata_base = technodata_base.drop(ccs_rows.index)
+
+                    # copy modified CO2 emission technologies add "CCS " to the beginning of the values in the "ProcessName" column
+                    CCS_technodata = CCS_technodata.loc[CCS_technodata.ProcessName.isin(CCS_tech)]
+                    CCS_technodata.loc[CCS_technodata["ProcessName"].isin(CCS_tech), "ProcessName"] = 'CCS ' + CCS_technodata.loc[CCS_technodata["ProcessName"].isin(CCS_tech), "ProcessName"].astype(str)
+
+                    os.remove(path_technodata)
+                    CCS_technodata_final = pd.concat([unit_row, technodata_base, CCS_technodata], ignore_index = True)
+                    CCS_technodata_final.to_csv(path_technodata, index=False)
 
                 if "energyDemand" in scenario_path_final:
                     # change energy demand
