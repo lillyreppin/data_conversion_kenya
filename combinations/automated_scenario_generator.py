@@ -14,6 +14,7 @@ class Scenarios:
         self.path_carbon_price_input = path_carbon_price_input
         self.path_CCS_CommIn_input = path_CCS_CommIn_input
         self.path_CCS_CommOut_input = path_CCS_CommOut_input
+
         self.path_commodity_input = path_commodity_input
         self.path_existing_capacity_input = path_existing_capacity_input
         self.path_technodata_input = path_technodata_input
@@ -31,7 +32,7 @@ class Scenarios:
         self.technodata_input = pd.read_csv(path_technodata_input)
         self.timeslices_input = pd.read_csv(path_timeslices_input)
 
-    def scenario_generation(self, n_scenarios: int = 1):
+    def scenario_generation(self, n_scenarios: int = 50):
         """
         Combinations.txt for scenario overview necessary!
         Generate a specific number of scenarios and randomise the values for capital and fixed costs, lifetime, utilisation factor and efficiency to +/-30% as well as the capacity for fossil fuels to 0 from 2030 onwards.
@@ -48,6 +49,16 @@ class Scenarios:
             "Light Fuel Oil Standalone Generator (1kW)",
             "Oil Fired Gas Turbine (SCGT)",
         ] 
+
+        CCS_new = [
+            "CCS Biomass Power Plant",
+            "CCS Coal Power Plant",
+            "CCS Gas Power Plant (SCGT)",
+            "CCS Gas Power Plant (CCGT)",
+            "CCS Light Fuel Oil Power Plant",
+            "CCS Light Fuel Oil Standalone Generator (1kW)",
+            "CCS Oil Fired Gas Turbine (SCGT)",
+        ]
 
         fossil = [
             "Coal Power Plant",
@@ -73,14 +84,14 @@ class Scenarios:
             "Solar PV (Utility)",
         ]
 
-        # Read scenario combinations from file
-        combinations_file = ".../data_conversion_kenya/combinations/combinations.txt"
+        # read scenario combinations from file
+        combinations_file = "../../../combinations.txt"
 
         with open(combinations_file, "r") as file:
             combinations = file.read().splitlines()
 
         # give path for scenarios
-        source_path = r"/../../../"
+        source_path = r"/../../.."
 
         # for-loop scenario generation path
         for i, combination in enumerate(combinations):
@@ -97,7 +108,7 @@ class Scenarios:
                     os.mkdir(scenario_path_final)
 
                 os.path.join(scenario_path, os.path.basename(source_path))
-                shutil.copytree(source_path, scenario_path_final, dirs_exist_ok=True)
+                shutil.copytree(source_path, scenario_path_final, dirs_exist_ok=True)              
 
                 if "ccs" in scenario_path_final:
                     # modify CommIn.csv by adding "CCS " to CO2 emission technologies and muliply commodities by 1.32
@@ -132,6 +143,21 @@ class Scenarios:
                     CCS_CommOut = CCS_CommOut.loc[CCS_CommOut.ProcessName.isin(CCS_tech)]
                     unit_row = pd.read_csv(path_CCS_CommOut, nrows=1)
                     commodities = self.commodity_input.copy()
+
+                    # set biomass emissions to 0
+                    path_CommOut = (
+                        scenario_path_final
+                        + "/technodata/power/CommOut.csv"
+                    )
+
+                    CommOut_base = self.CCS_CommOut_input.copy().drop(0)
+                    unit_row = pd.read_csv(path_CommOut, nrows=1)
+                    CommOut_base["CO2f"] = CommOut_base["CO2f"].astype(float)
+                    CommOut_base.loc[CommOut_base["ProcessName"] == "Biomass Power Plant", "CO2f"] = 0
+
+                    os.remove(path_CommOut)
+                    CommOut_final = pd.concat([unit_row, CommOut_base], ignore_index = True)
+                    CommOut_final.to_csv(path_CommOut, index=False)
 
                     # add "CCS " to the beginning of the values in the "ProcessName" column
                     CCS_CommOut.loc[CCS_CommOut["ProcessName"].isin(CCS_tech), "ProcessName"] = 'CCS ' + CCS_CommOut.loc[CCS_CommOut["ProcessName"].isin(CCS_tech), "ProcessName"].astype(str)
@@ -174,6 +200,21 @@ class Scenarios:
                     CCS_existing_capacity = CCS_existing_capacity.loc[CCS_existing_capacity.ProcessName.isin(CCS_tech)]
                     CCS_existing_capacity.loc[CCS_existing_capacity["ProcessName"].isin(CCS_tech), "ProcessName"] = 'CCS ' + CCS_existing_capacity.loc[CCS_existing_capacity["ProcessName"].isin(CCS_tech), "ProcessName"].astype(str)
 
+                    CCS_existing_capacity["2020"] = CCS_existing_capacity["2020"].astype(float)
+                    CCS_existing_capacity["2025"] = CCS_existing_capacity["2025"].astype(float)
+                    CCS_existing_capacity["2030"] = CCS_existing_capacity["2030"].astype(float)
+                    CCS_existing_capacity["2035"] = CCS_existing_capacity["2035"].astype(float)
+                    CCS_existing_capacity["2040"] = CCS_existing_capacity["2040"].astype(float)
+                    CCS_existing_capacity["2045"] = CCS_existing_capacity["2045"].astype(float)
+                    CCS_existing_capacity["2050"] = CCS_existing_capacity["2050"].astype(float)
+                    CCS_existing_capacity["2020"].loc[CCS_existing_capacity.ProcessName.isin(CCS_new)] = 0 
+                    CCS_existing_capacity["2025"].loc[CCS_existing_capacity.ProcessName.isin(CCS_new)] = 0 
+                    CCS_existing_capacity["2030"].loc[CCS_existing_capacity.ProcessName.isin(CCS_new)] = 0 
+                    CCS_existing_capacity["2035"].loc[CCS_existing_capacity.ProcessName.isin(CCS_new)] = 0 
+                    CCS_existing_capacity["2040"].loc[CCS_existing_capacity.ProcessName.isin(CCS_new)] = 0 
+                    CCS_existing_capacity["2045"].loc[CCS_existing_capacity.ProcessName.isin(CCS_new)] = 0 
+                    CCS_existing_capacity["2050"].loc[CCS_existing_capacity.ProcessName.isin(CCS_new)] = 0 
+            
                     os.remove(path_existing_capacity)
                     CCS_existing_capacity_final = pd.concat([unit_row, existing_capacity_base, CCS_existing_capacity], ignore_index = True)
                     CCS_existing_capacity_final.to_csv(path_existing_capacity, index=False)
@@ -191,6 +232,17 @@ class Scenarios:
                     # add "CCS " to the beginning of the values in the "ProcessName" column
                     CCS_technodata = CCS_technodata.loc[CCS_technodata.ProcessName.isin(CCS_tech)]
                     CCS_technodata.loc[CCS_technodata["ProcessName"].isin(CCS_tech), "ProcessName"] = 'CCS ' + CCS_technodata.loc[CCS_technodata["ProcessName"].isin(CCS_tech), "ProcessName"].astype(str)
+                    # introduction of CCS technologies after 2030
+                    capacity_before_2030 = ["2015", "2020", "2025"]
+                    capacity_from_2030 = ["2030", "2040", "2050"]
+                    CCS_technodata["MaxCapacityAddition"] = CCS_technodata["MaxCapacityAddition"].astype(float)
+                    CCS_technodata["MaxCapacityGrowth"] = CCS_technodata["MaxCapacityGrowth"].astype(float)
+                    CCS_technodata["TotalCapacityLimit"] = CCS_technodata["TotalCapacityLimit"].astype(float)
+                    CCS_technodata["MaxCapacityAddition"].loc[CCS_technodata.Time.isin(capacity_before_2030)] = 0 
+                    CCS_technodata["MaxCapacityGrowth"].loc[CCS_technodata.Time.isin(capacity_before_2030)] = 0 
+                    CCS_technodata["TotalCapacityLimit"].loc[CCS_technodata.Time.isin(capacity_before_2030)] = 0 
+                    CCS_technodata["MaxCapacityAddition"].loc[CCS_technodata.Time.isin(capacity_from_2030)] = 0.01
+                    CCS_technodata["MaxCapacityGrowth"].loc[CCS_technodata.Time.isin(capacity_from_2030)] = 0.005
 
                     os.remove(path_technodata)
                     CCS_technodata_final = pd.concat([unit_row, technodata_base, CCS_technodata], ignore_index = True)
@@ -214,6 +266,22 @@ class Scenarios:
                     CCS_timeslices_final = pd.concat([unit_row, timeslices_base, CCS_timeslices], ignore_index = True)
                     CCS_timeslices_final.to_csv(path_timeslices, index=False)
 
+                if "ccs" not in scenario_path_final:
+                    path_CommOut = (
+                        scenario_path_final
+                        + "/technodata/power/CommOut.csv"
+                    )
+
+                    CommOut_base = self.CCS_CommOut_input.copy().drop(0)
+                    unit_row = pd.read_csv(path_CommOut, nrows=1)
+                    CommOut_base["CO2f"] = CommOut_base["CO2f"].astype(float)
+                    CommOut_base.loc[CommOut_base["ProcessName"] == "Biomass Power Plant", "CO2f"] = 0
+
+                    os.remove(path_CommOut)
+                    CommOut_final = pd.concat([unit_row, CommOut_base], ignore_index = True)
+                    CommOut_final.to_csv(path_CommOut, index=False)
+
+                # adapt techno data file
                 path_techno_data = (
                     scenario_path_final
                     + "/technodata/power/Technodata.csv"
@@ -231,13 +299,13 @@ class Scenarios:
                     
 
                     technodata_final["cap_par"].loc[
-                        technodata_final.ProcessName.isin(fossil)
+                        technodata_final.ProcessName.isin(fossil + CCS_new)
                     ] = random.uniform(
                         technodata_final["cap_par"] * 0.7, technodata_final["cap_par"] * 1.3
                     )
                     
                     technodata_final["fix_par"].loc[
-                        technodata_final.ProcessName.isin(fossil)
+                        technodata_final.ProcessName.isin(fossil + CCS_new)
                     ] = random.uniform(
                         technodata_final["fix_par"] * 0.7, technodata_final["fix_par"] * 1.3
                     )
@@ -259,7 +327,7 @@ class Scenarios:
                     technodata_final["TechnicalLife"] = technodata_final["TechnicalLife"].astype(float)
 
                     technodata_final["TechnicalLife"].loc[
-                        technodata_final.ProcessName.isin(fossil)
+                        technodata_final.ProcessName.isin(fossil + CCS_new)
                     ] = random.uniform(
                         technodata_final["TechnicalLife"] * 0.7, technodata_final["TechnicalLife"] * 1.3
                     )
@@ -270,12 +338,12 @@ class Scenarios:
                         technodata_final["TechnicalLife"] * 0.7, technodata_final["TechnicalLife"] * 1.3
                     )
                 
-                if "utilisationFactor" in scenario_path_final:                           
-                    # change utilisation factor
+                if "utilisation" in scenario_path_final:                           
+                    # change utilisation factor in technodata.csv
                     technodata_final["UtilizationFactor"] = technodata_final["UtilizationFactor"].astype(float)
 
-                    utilisation_min_fossil = technodata_final["UtilizationFactor"].loc[technodata_final.ProcessName.isin(fossil)] * 0.7
-                    utilisation_max_fossil = technodata_final["UtilizationFactor"].loc[technodata_final.ProcessName.isin(fossil)] * 1.3
+                    utilisation_min_fossil = technodata_final["UtilizationFactor"].loc[technodata_final.ProcessName.isin(fossil + CCS_new)] * 0.7
+                    utilisation_max_fossil = technodata_final["UtilizationFactor"].loc[technodata_final.ProcessName.isin(fossil + CCS_new)] * 1.3
                     utilisation_capped_fossil = utilisation_max_fossil.where(utilisation_max_fossil <= 1, 1)
                     random_utilisation_fossil = np.random.uniform(utilisation_min_fossil, utilisation_capped_fossil)
 
@@ -284,14 +352,11 @@ class Scenarios:
                     utilisation_capped_renewables = utilisation_max_renewables.where(utilisation_max_renewables <= 1, 1)
                     random_utilisation_renewables = np.random.uniform(utilisation_min_renewables, utilisation_capped_renewables)
 
-                    technodata_final.loc[technodata_final.ProcessName.isin(fossil), "UtilizationFactor"] = random_utilisation_fossil
+                    technodata_final.loc[technodata_final.ProcessName.isin(fossil + CCS_new), "UtilizationFactor"] = random_utilisation_fossil
                     technodata_final.loc[technodata_final.ProcessName.isin(renewables), "UtilizationFactor"] = random_utilisation_renewables
-                
+
                 if "capacity" in scenario_path_final:
-                    if "capacityThirty" in scenario_path_final:
-                        capacity_shut_down = ["2030", "2035", "2040", "2045", "2050"]
-                    if "capacityForty" in scenario_path_final:
-                        capacity_shut_down = ["2040", "2045", "2050"]
+                    capacity_shut_down = ["2030", "2035", "2040", "2045", "2050", "2055", "2060"]
                     # change capacity according to shut down year
                     technodata_final["MaxCapacityAddition"] = technodata_final["MaxCapacityAddition"].astype(float)
                     technodata_final["MaxCapacityGrowth"] = technodata_final["MaxCapacityGrowth"].astype(float)
@@ -299,11 +364,6 @@ class Scenarios:
                     technodata_final["MaxCapacityAddition"].loc[technodata_final.ProcessName.isin(fossil) & technodata_final.Time.isin(capacity_shut_down)] = 0 
                     technodata_final["MaxCapacityGrowth"].loc[technodata_final.ProcessName.isin(fossil) & technodata_final.Time.isin(capacity_shut_down)] = 0
                 
-                # save new technodata file with all changes
-                os.remove(path_techno_data)
-                technodata_final = pd.concat([unit_row, technodata_final], ignore_index = True)
-                technodata_final.to_csv(path_techno_data, index=False)
-
                 if "ccs" in scenario_path_final:
                     # copy modified CO2 emission technologies and add "CCS " to ProcessName
                     path_technodata = (
@@ -327,11 +387,56 @@ class Scenarios:
                     CCS_technodata = CCS_technodata.loc[CCS_technodata.ProcessName.isin(CCS_tech)]
                     CCS_technodata.loc[CCS_technodata["ProcessName"].isin(CCS_tech), "ProcessName"] = 'CCS ' + CCS_technodata.loc[CCS_technodata["ProcessName"].isin(CCS_tech), "ProcessName"].astype(str)
 
+                    # introduction of CCS technologies after 2030
+                    capacity_before_2030 = ["2015", "2020", "2025"]
+                    CCS_technodata["MaxCapacityAddition"] = CCS_technodata["MaxCapacityAddition"].astype(float)
+                    CCS_technodata["MaxCapacityGrowth"] = CCS_technodata["MaxCapacityGrowth"].astype(float)
+                    CCS_technodata["TotalCapacityLimit"] = CCS_technodata["TotalCapacityLimit"].astype(float)
+                    CCS_technodata["MaxCapacityAddition"].loc[CCS_technodata.Time.isin(capacity_before_2030)] = 0 
+                    CCS_technodata["MaxCapacityGrowth"].loc[CCS_technodata.Time.isin(capacity_before_2030)] = 0 
+                    CCS_technodata["TotalCapacityLimit"].loc[CCS_technodata.Time.isin(capacity_before_2030)] = 0 
+
                     os.remove(path_technodata)
                     CCS_technodata_final = pd.concat([unit_row, technodata_base, CCS_technodata], ignore_index = True)
                     CCS_technodata_final.to_csv(path_technodata, index=False)
 
-                if "energyDemand" in scenario_path_final:
+                # save new technodata file with all changes
+                os.remove(path_techno_data)
+                technodata_final = pd.concat([unit_row, technodata_final], ignore_index = True)
+                technodata_final.to_csv(path_techno_data, index=False)
+
+                if "utilisation" in scenario_path_final: 
+                    # change utilisation factor in technodataTimeslices.csv
+                    path_timeslices = (
+                        scenario_path_final
+                        + "/technodata/power/TechnodataTimeslices.csv"
+                    )
+
+                    timeslices = pd.read_csv(path_timeslices)
+                    unit_row = pd.read_csv(path_timeslices, nrows=1)
+
+                    timeslices_final = timeslices.copy().drop(0)                         
+                    # change utilisation factor
+                    timeslices_final["UtilizationFactor"] = timeslices_final["UtilizationFactor"].astype(float)
+
+                    timeslices_utilisation_min_fossil = timeslices_final["UtilizationFactor"].loc[timeslices_final.ProcessName.isin(fossil + CCS_new)] * 0.7
+                    timeslices_utilisation_max_fossil = timeslices_final["UtilizationFactor"].loc[timeslices_final.ProcessName.isin(fossil + CCS_new)] * 1.3
+                    timeslices_utilisation_capped_fossil = timeslices_utilisation_max_fossil.where(timeslices_utilisation_max_fossil <= 1, 1)
+                    timeslices_random_utilisation_fossil = np.random.uniform(timeslices_utilisation_min_fossil, timeslices_utilisation_capped_fossil)
+
+                    timeslices_utilisation_min_renewables = timeslices_final["UtilizationFactor"].loc[timeslices_final.ProcessName.isin(renewables)] * 0.7
+                    timeslices_utilisation_max_renewables = timeslices_final["UtilizationFactor"].loc[timeslices_final.ProcessName.isin(renewables)] * 1.3
+                    timeslices_utilisation_capped_renewables = timeslices_utilisation_max_renewables.where(timeslices_utilisation_max_renewables <= 1, 1)
+                    timeslices_random_utilisation_renewables = np.random.uniform(timeslices_utilisation_min_renewables, timeslices_utilisation_capped_renewables)
+
+                    timeslices_final.loc[timeslices_final.ProcessName.isin(fossil + CCS_new), "UtilizationFactor"] = timeslices_random_utilisation_fossil
+                    timeslices_final.loc[timeslices_final.ProcessName.isin(renewables), "UtilizationFactor"] = timeslices_random_utilisation_renewables
+
+                    os.remove(path_timeslices)
+                    timeslices_final2 = pd.concat([unit_row, timeslices_final], ignore_index = True)
+                    timeslices_final2.to_csv(path_timeslices, index=False)
+
+                if "demand" in scenario_path_final:
                     # change energy demand
                     path_demand_2030 = (
                         scenario_path_final
@@ -393,7 +498,7 @@ class Scenarios:
                     demand_2050_final = demand_2050_final.drop('Unnamed: 0', axis=1) # delete first row "Unnamed: 0" from base input 
                     demand_2050_final.to_csv(path_demand_2050, index=False)
                 
-                if any(scenario in scenario_path_final for scenario in ['C30-const', 'C80-const', 'C30-gr5', 'C80-gr5']):
+                if any(scenario in scenario_path_final for scenario in ['carbonpricing']): # 'C30-const', 'C80-const', 'C30-gr5', 'C80-gr5'
                     # implement carbon price
                     path_carbon_price = (
                         scenario_path_final
@@ -407,8 +512,9 @@ class Scenarios:
                     carbon_price["CO2f"] = carbon_price["CO2f"].astype(float)
                     carbon_price["Time"] = carbon_price["Time"].astype(int)
 
-                    if 'C30-const' in scenario_path_final:
-                        carbon_price.loc[carbon_price['Time'] >= 2025, 'CO2f'] = 0.03 # changes all values > 2025 to 0.03
+                    if 'carbonpricing' in scenario_path_final:
+                        value = 0.1 * (1.05 ** (carbon_price['Time'] - 2025))
+                        carbon_price.loc[carbon_price['Time'] >= 2025, 'CO2f'] = value.where((carbon_price['Time'] >= 2025))
                     elif 'C80-const' in scenario_path_final:
                         carbon_price.loc[carbon_price['Time'] >= 2025, 'CO2f'] = 0.08 # changes all values > 2025 to 0.08
                     elif 'C30-gr5' in scenario_path_final:
@@ -417,6 +523,8 @@ class Scenarios:
                     elif 'C80-gr5' in scenario_path_final:
                         value = 0.08 * (1.05 ** (carbon_price['Time'] - 2040))
                         carbon_price.loc[carbon_price['Time'] >= 2025, 'CO2f'] = value.where((carbon_price['Time'] >= 2025))
+                    elif 'C30-const' in scenario_path_final:
+                        carbon_price.loc[carbon_price['Time'] >= 2025, 'CO2f'] = 0.03 # changes all values > 2025 to 0.03
                     else:
                         raise ValueError('Scenario not recognized.')
 
@@ -426,11 +534,10 @@ class Scenarios:
 
         return self
 
-
-PATH_BASE_INPUT = "/Users/lilly/muse_kenya/run/Kenya/base/technodata/power"
-PATH_DEMAND_INPUT = "/Users/lilly/muse_kenya/run/Kenya/base/technodata/preset"
-PATH_PROJECTIONS_INPUT = "/Users/lilly/muse_kenya/run/Kenya/base/input"
-PATH_COMMODITY_INPUT = "/Users/lilly/muse_kenya/run/Kenya/base/input"
+PATH_BASE_INPUT = "/../../.."
+PATH_DEMAND_INPUT = "/../../.."
+PATH_PROJECTIONS_INPUT = "/../../.."
+PATH_COMMODITY_INPUT = "/../../.."
 scenario_input = Scenarios(
     path_to_base_input=os.path.join(PATH_BASE_INPUT, "Technodata.csv"),
     path_to_demand_2030=os.path.join(PATH_DEMAND_INPUT, "Electricity2030Consumption.csv"),
